@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jocked</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background-color: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+        
+        .terminal-container {
+            display: flex;
+            height: 100vh;
+            padding: 20px;
+            gap: 10px;
+        }
+        
+        .text-column {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            position: relative;
+            height: 100%;
+        }
+        
+        .char {
+            position: absolute;
+            font-size: 18px;
+            text-shadow: 0 0 5px #0f0;
+            animation: charFall linear forwards;
+            opacity: 0;
+        }
+        
+        @keyframes charFall {
+            0% {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            80% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh);
+                opacity: 0;
+            }
+        }
+        
+        .header {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 14px;
+            opacity: 0.7;
+            z-index: 10;
+        }
+        
+        .footer {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            font-size: 12px;
+            opacity: 0.5;
+            z-index: 10;
+        }
+        
+        .matrix-code {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            opacity: 0.1;
+        }
+        
+        .matrix-char {
+            position: absolute;
+            color: #0f0;
+            font-size: 14px;
+            animation: matrixFall linear infinite;
+        }
+        
+        @keyframes matrixFall {
+            0% {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            5% {
+                opacity: 1;
+            }
+            95% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100vh);
+                opacity: 0;
+            }
+        }
+        
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 16px;
+            background-color: #0f0;
+            animation: blink 1s infinite;
+            margin-left: 2px;
+        }
+        
+        @keyframes blink {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0;
+            }
+        }
+        
+        .status-line {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">SYSTEM TERMINAL // ACCESS: LEVEL 9 // ENCRYPTION: AES-256</div>
+    <div class="footer">CONNECTION: SECURE // DATA STREAM: ACTIVE</div>
+    <div class="status-line">> INITIALIZING DATA STREAM<span class="cursor"></span></div>
+    <div class="terminal-container" id="terminal"></div>
+    <div class="matrix-code" id="matrixCode"></div>
+
+    <script>
+        // Extended character sets for the hacker text
+        const latinChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+        const numbers = "0123456789";
+        const symbols = "!@#$%^&*()_+-=[]{}|;:,.<>?/~`";
+        const greek = "αβγδεζηθικλμνξοπρστυφχψωΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ";
+        const cyrillic = "абвгдежзийклмнопрстуфхцчшщъыьэюяАБВГДЕЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ";
+        const japanese = "あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをん";
+        const arabic = "ابتثجحخدذرزسشصضطظعغفقكلمنهوي";
+        const hebrew = "אבגדהוזחטיכלמנסעפצקרשת";
+        const mathSymbols = "∀∁∂∃∄∅∆∇∈∉∊∋∌∍∎∏∐∑−∓∔∕∖∗∘∙√∛∜∝∞∟∠∡∢∣∤∥∦∧∨∩∪∫∬∭∮∯∰∱∲∳∴∵∶∷∸∹∺∻∼∽∾∿≀≁≂≃≄≅≆≇≈≉≊≋≌≍≎≏≐≑≒≓≔≕≖≗≘≙≚≛≜≝≞≟≠≡≢≣≤≥≦≧≨≩≪≫≬≭≮≯≰≱≲≳≴≵≶≷≸≹≺≻≼≽≾≿⊀⊁⊂⊃⊄⊅⊆⊇⊈⊉⊊⊋⊌⊍⊎⊏⊐⊑⊒⊓⊔⊕⊖⊗⊘⊙⊚⊛⊜⊝⊞⊟⊠⊡⊢⊣⊤⊥⊦⊧⊨⊩⊪⊫⊬⊭⊮⊯⊰⊱⊲⊳⊴⊵⊶⊷⊸⊹⊺⊻⊼⊽⊾⊿⋀⋁⋂⋃⋄⋅⋆⋇⋈⋉⋊⋋⋌⋍⋎⋏⋐⋑⋒⋓⋔⋕⋖⋗⋘⋙⋚⋛⋜⋝⋞⋟⋠⋡⋢⋣⋤⋤⋥⋦⋧⋨⋩⋪⋫⋬⋭⋮⋯⋰⋱";
+        
+        // Combine all character sets
+        const allChars = latinChars + numbers + symbols + greek + cyrillic + japanese + 
+                         arabic + hebrew + mathSymbols;
+        
+        // Terminal content
+        const terminal = document.getElementById('terminal');
+        const matrixCode = document.getElementById('matrixCode');
+        
+        // Create columns
+        const columnCount = Math.floor(window.innerWidth / 20);
+        const columns = [];
+        
+        for (let i = 0; i < columnCount; i++) {
+            const column = document.createElement('div');
+            column.className = 'text-column';
+            terminal.appendChild(column);
+            columns.push(column);
+        }
+        
+        // Function to create a falling character
+        function createFallingChar(columnIndex) {
+            const column = columns[columnIndex];
+            if (!column) return;
+            
+            const char = document.createElement('div');
+            char.className = 'char';
+            
+            // Random character
+            char.textContent = allChars.charAt(Math.floor(Math.random() * allChars.length));
+            
+            // Random properties
+            const duration = Math.random() * 8 + 4;
+            const delay = Math.random() * 2;
+            const fontSize = Math.floor(Math.random() * 8) + 14;
+            const opacity = Math.random() * 0.8 + 0.2;
+            
+            char.style.animationDuration = `${duration}s`;
+            char.style.animationDelay = `${delay}s`;
+            char.style.fontSize = `${fontSize}px`;
+            char.style.opacity = opacity;
+            
+            // Random horizontal position within column
+            const left = Math.random() * (column.offsetWidth - 20);
+            char.style.left = `${left}px`;
+            
+            column.appendChild(char);
+            
+            // Remove character after animation completes
+            setTimeout(() => {
+                if (char.parentNode) {
+                    char.parentNode.removeChild(char);
+                }
+            }, (duration + delay) * 1000);
+        }
+        
+        // Start character generation for each column
+        columns.forEach((column, index) => {
+            // Different start delays for each column
+            const initialDelay = Math.random() * 3000;
+            
+            setTimeout(() => {
+                // Create initial characters
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => {
+                        createFallingChar(index);
+                    }, i * 500);
+                }
+                
+                // Continue creating characters
+                const interval = setInterval(() => {
+                    createFallingChar(index);
+                }, Math.random() * 300 + 200);
+            }, initialDelay);
+        });
+        
+        // Add Matrix-style background effect
+        function createMatrixEffect() {
+            const charCount = Math.floor(window.innerWidth / 14);
+            
+            for (let i = 0; i < charCount; i++) {
+                const matrixChar = document.createElement('div');
+                matrixChar.className = 'matrix-char';
+                
+                const left = i * 14;
+                matrixChar.style.left = `${left}px`;
+                
+                const delay = Math.random() * 5;
+                const duration = Math.random() * 3 + 2;
+                matrixChar.style.animationDelay = `${delay}s`;
+                matrixChar.style.animationDuration = `${duration}s`;
+                
+                matrixChar.textContent = allChars.charAt(Math.floor(Math.random() * allChars.length));
+                
+                matrixCode.appendChild(matrixChar);
+                
+                // Update character periodically
+                setInterval(() => {
+                    matrixChar.textContent = allChars.charAt(Math.floor(Math.random() * allChars.length));
+                }, 200);
+            }
+        }
+        
+        createMatrixEffect();
+        
+        // Add some hacker-like messages occasionally
+        const messages = [
+            "ACCESSING MAINFRAME...",
+            "ENCRYPTION BYPASSED...",
+            "DOWNLOADING DATA...",
+            "UPLOADING PAYLOAD...",
+            "SCANNING NETWORK...",
+            "BRUTE FORCE ATTACK INITIATED...",
+            "ROOT ACCESS GRANTED...",
+            "DATABASE COMPROMISED...",
+            "INJECTING MALWARE...",
+            "EXFILTRATING FILES...",
+            "OVERRIDING SECURITY...",
+            "DECRYPTING FILESYSTEM..."
+        ];
+        
+        function showHackerMessage() {
+            // Select a random column
+            const columnIndex = Math.floor(Math.random() * columns.length);
+            const column = columns[columnIndex];
+            
+            // Create message characters
+            const message = messages[Math.floor(Math.random() * messages.length)];
+            const chars = message.split('');
+            
+            chars.forEach((char, index) => {
+                setTimeout(() => {
+                    const messageChar = document.createElement('div');
+                    messageChar.className = 'char';
+                    messageChar.textContent = char;
+                    
+                    // Special styling for message characters
+                    messageChar.style.animationDuration = '10s';
+                    messageChar.style.fontSize = '16px';
+                    messageChar.style.fontWeight = 'bold';
+                    messageChar.style.opacity = '1';
+                    messageChar.style.color = '#0f0';
+                    messageChar.style.textShadow = '0 0 10px #0f0';
+                    
+                    // Position in the middle of the column
+                    const left = (column.offsetWidth - 10) / 2;
+                    messageChar.style.left = `${left}px`;
+                    
+                    column.appendChild(messageChar);
+                    
+                    // Remove character after animation completes
+                    setTimeout(() => {
+                        if (messageChar.parentNode) {
+                            messageChar.parentNode.removeChild(messageChar);
+                        }
+                    }, 10000);
+                }, index * 100);
+            });
+        }
+        
+        // Show hacker messages occasionally
+        setInterval(() => {
+            if (Math.random() > 0.7) {
+                showHackerMessage();
+            }
+        }, 8000);
+        
+        // Update status line
+        const statusLine = document.querySelector('.status-line');
+        let statusIndex = 0;
+        
+        function updateStatus() {
+            const statuses = [
+                "> INITIALIZING DATA STREAM",
+                "> CONNECTING TO SERVER",
+                "> ESTABLISHING ENCRYPTION",
+                "> DOWNLOADING CONFIGURATION",
+                "> SCANNING NETWORK PORTS",
+                "> BYPASSING FIREWALL",
+                "> ACCESSING DATABASE",
+                "> DATA STREAM ACTIVE"
+            ];
+            
+            statusLine.innerHTML = statuses[statusIndex] + '<span class="cursor"></span>';
+            statusIndex = (statusIndex + 1) % statuses.length;
+        }
+        
+        setInterval(updateStatus, 3000);
+    </script>
+</body>
+</html>
